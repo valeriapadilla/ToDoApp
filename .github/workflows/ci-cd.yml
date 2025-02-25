@@ -25,9 +25,18 @@ jobs:
 
       - name: Run Tests
         run: npm test
-
+        
+      - name: Bump Version
+        id: bump
+        uses: phips28/gh-action-bump-version@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag-prefix: 'v'
+          initial_version: '1.0.0'
+      
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ github.sha }} .
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ steps.bump.outputs.new_version }} .
 
   push-and-deploy:
     needs: build-test
@@ -40,11 +49,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Push Docker Image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ github.sha }}
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ steps.bump.outputs.new_version }}
 
       - name: Deploy to Vagrant VM
         run: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ github.sha }}
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ steps.bump.outputs.new_version }}
             docker stop todo-app || true
             docker rm todo-app || true
-            docker run -d --name todo-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ github.sha }}
+            docker run -d --name todo-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ steps.bump.outputs.new_version }}
