@@ -31,3 +31,16 @@ test('it updates items correctly', async () => {
     expect(res.send.mock.calls[0].length).toBe(1);
     expect(res.send.mock.calls[0][0]).toEqual(ITEM);
 });
+
+
+test('it throws an error when db.updateItem fails', async () => {
+    const req = {
+        params: { id: '1234' },
+        body: { name: 'New title', completed: false },
+    };
+    const res = { send: jest.fn() };
+
+    db.updateItem.mockRejectedValue(new Error('Update failed'));
+
+    await expect(updateItem(req, res)).rejects.toThrow('Update failed');
+});
