@@ -4,12 +4,11 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
+    tags:
+      - 'v*'
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 jobs:
@@ -33,18 +32,15 @@ jobs:
       - name: checkout code
         uses: actions/checkout@v3
 
-      - name: Bump Version
-        id: bump
-        uses: phips28/gh-action-bump-version@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          tag-prefix: 'v'
-
-      - name: Push Version Tag
-        run: |
-          git tag ${{ steps.bump.outputs.new_version }}
-          git push origin ${{ steps.bump.outputs.new_version }}
+          images: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/todo-app
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
 
       - name: Log in to DockerHub
         uses: docker/login-action@v2
@@ -60,18 +56,20 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ steps.bump.outputs.new_version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:latest
+          tags: ${{ steps.meta.outputs.tags }}
           
 
   deploy:
     needs: [build-test, build-push]
     runs-on: self-hosted
     steps:
-      - name: Deploy to Vagrant VM
+      - name: Pull Docker Image
+        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ github.ref_name }}
+
+      - name: Stop and remove previous container
         run: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:latest
-            docker stop todo-app || true
-            docker rm todo-app || true
-            docker run -d --name todo-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:latest
+          docker stop todo-app || true
+          docker rm todo-app || true
+
+      - name: Run new container
+        run: docker run -d --name todo-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ github.ref_name }}
