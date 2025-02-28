@@ -63,7 +63,7 @@ jobs:
     steps:
         
       - name: Pull Docker Image
-        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ env.VERSION }}
+        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ github.ref_name }}
 
       - name: Stop and remove previous container
         run: |
@@ -71,4 +71,4 @@ jobs:
           docker rm todo-app || true
 
       - name: Run new container
-        run: docker run -d --name todo-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ env.VERSION }}
+        run: docker run -d --name todo-app -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ github.ref_name }}
