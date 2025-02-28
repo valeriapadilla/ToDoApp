@@ -72,3 +72,4 @@ jobs:
 
       - name: Run new container
         run: docker run -d --name todo-app -p 3000:3000 ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ github.ref_name }}
+
